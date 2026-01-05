@@ -2,7 +2,6 @@ import admin from "../config/firebase.js";
 
 export default async function firebaseAuth(req, res, next) {
   const token = req.headers.authorization?.replace("Bearer ", "");
-  console.log("token>>>> ", token);
   
   if (!token) return res.status(401).json({ message: "No token provided" });
 
