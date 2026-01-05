@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { uploadFile, getSignedUrl } from "../utils/fileupload.js";
 
 export default {
 
@@ -53,12 +54,58 @@ export default {
   list: async (req, res) => {
     const uid = req.user.uid;
 
+    // const [rows] = await pool.query(
+    //   `SELECT * FROM demos WHERE user_id=? ORDER BY created_at DESC`,
+    //   [uid]
+    // );
+
     const [rows] = await pool.query(
-      `SELECT * FROM demos WHERE user_id=? ORDER BY created_at DESC`,
+      `
+      SELECT 
+        d.*,
+        di.id AS image_id,
+        di.image_path,
+        di.original_name
+      FROM demos d
+      LEFT JOIN demo_images di ON di.demo_id = d.id
+      WHERE d.user_id = ?
+      ORDER BY d.created_at DESC
+      `,
       [uid]
     );
 
-    res.json(rows);
+    // Group images per demo
+    const map = {};
+
+    for (const row of rows) {
+      if (!map[row.id]) {
+        map[row.id] = {
+          id: row.id,
+          place_name: row.place_name,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          description: row.description,
+          mobile: row.mobile,
+          contact_person: row.contact_person,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+          images: []
+        };
+      }
+
+      if (row.image_path) {
+        const url = await getSignedUrl( row.image_path);
+
+        map[row.id].images.push({
+          id: row.image_id,
+          url
+        });
+      }
+    }
+
+    res.json(Object.values(map));
+
+    // res.json(rows);
   },
 
   // Detail
@@ -114,5 +161,101 @@ export default {
     );
 
     res.json({ success: true });
-  }
+  },
+
+  //  NEW SYNC WITH FILE UPLOAD
+  syncNew: async (req, res) => {
+    const uid = req.user.uid;
+
+    const {
+      local_id,
+      place_name,
+      latitude,
+      longitude,
+      description,
+      mobile,
+      contact_person,
+      created_at,
+      updated_at,
+      user_id,
+    } = req.body;
+
+    try {
+      // 1️⃣ Check duplicate
+      const [existing] = await pool.query(
+        `SELECT id FROM demos WHERE local_id = ? AND user_id = ?`,
+        [local_id, uid]
+      );
+
+      if (existing.length > 0) {
+        return res.json({
+          success: true,
+          synced: [],
+          message: "Already synced",
+        });
+      }
+
+      // 2️⃣ Insert demo
+      const [result] = await pool.query(
+        `INSERT INTO demos
+       (local_id, user_id, place_name, latitude, longitude, description, mobile, contact_person, created_at, updated_at, sync_status)
+       VALUES (?,?,?,?,?,?,?,?,?,?,1)`,
+        [
+          local_id,
+          uid,
+          place_name,
+          latitude,
+          longitude,
+          description,
+          mobile,
+          contact_person,
+          created_at,
+          updated_at
+        ]
+      );
+
+      const demoId = result.insertId;
+
+      // 3️⃣ Upload photos to S3 + save DB
+      if (req.files && req.files.length > 0) {
+        for (const file of req.files) {
+
+          let fileUrl = await uploadFile(file);
+          console.log('fileUrl === ', fileUrl);
+
+          // 💾 Save S3 reference in DB
+          await pool.query(
+            `INSERT INTO demo_images
+           (demo_id, image_path, original_name, mime_type, file_size)
+           VALUES (?,?,?,?,?)`,
+            [
+              demoId,
+              fileUrl,                // ✅ S3 key
+              file.originalname,
+              file.mimetype,
+              file.size,
+            ]
+          );
+        }
+      }
+
+      // 4️⃣ Response for mobile
+      res.json({
+        success: true,
+        synced: [
+          {
+            local_id,
+            server_id: demoId,
+          },
+        ],
+      });
+    } catch (err) {
+      console.error("syncNew error:", err);
+      res.status(500).json({
+        success: false,
+        message: "Sync failed",
+      });
+    }
+  },
+
 };

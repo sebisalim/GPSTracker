@@ -32,6 +32,23 @@ const pool = mysql.createPool({
     );
   `);
 
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS demo_images (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      demo_id INT NOT NULL,
+      image_path VARCHAR(500) NOT NULL,
+      original_name VARCHAR(255),
+      mime_type VARCHAR(100),
+      file_size INT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT fk_demo_images_demo
+        FOREIGN KEY (demo_id)
+        REFERENCES demos(id)
+        ON DELETE CASCADE
+    )
+  `);
+
+
   conn.release();
 })();
 
