@@ -218,7 +218,7 @@ export default {
         );
 
         for (const img of oldImages) {
-          await deleteFromS3(img.image_path);
+          await deleteFile(img.image_path);
         }
 
         await pool.query(
