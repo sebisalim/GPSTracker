@@ -178,7 +178,6 @@ export default {
       contact_person,
       created_at,
       updated_at,
-      images = []
     } = req.body;
 
     try {
@@ -224,28 +223,21 @@ export default {
             uid
           ]
         );
-      }
 
-      // IMAGE DIFFING (UPDATE)
-      if (server_id) {
-        const [existingImages] = await pool.query(
+        //  DELETE ALL OLD IMAGES
+        const [oldImages] = await pool.query(
           `SELECT image_path FROM demo_images WHERE demo_id = ?`,
-          [demoId]
+          [server_id]
         );
 
-        const dbKeys = existingImages.map(i => i.image_path);
-
-        const keysToDelete = dbKeys.filter(k => !images.includes(k));
-
-        // 🔥 Delete from S3 + DB
-        for (const key of keysToDelete) {
-          await deleteFile(key);
-
-          await pool.query(
-            `DELETE FROM demo_images WHERE demo_id = ? AND image_path = ?`,
-            [demoId, key]
-          );
+        for (const img of oldImages) {
+          await deleteFromS3(img.image_path);
         }
+
+        await pool.query(
+          `DELETE FROM demo_images WHERE demo_id = ?`,
+          [server_id]
+        );
       }
 
       // UPLOAD NEW FILES
