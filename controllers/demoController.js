@@ -1,5 +1,5 @@
 import pool from "../config/db.js";
-import { uploadFile, getSignedUrl } from "../utils/fileupload.js";
+import { uploadFile, getSignedUrl, deleteFile } from "../utils/fileupload.js";
 
 export default {
 
