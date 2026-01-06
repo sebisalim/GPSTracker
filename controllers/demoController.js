@@ -168,7 +168,6 @@ export default {
     const uid = req.user.uid;
 
     const {
-      server_id,
       local_id,
       place_name,
       latitude,
@@ -181,14 +180,59 @@ export default {
     } = req.body;
 
     try {
-      let demoId = server_id;
+      // CHECK IF DEMO EXISTS
+      const [rows] = await pool.query(
+        `SELECT id FROM demos WHERE local_id = ? AND user_id = ?`,
+        [local_id, uid]
+      );
 
-      if (!server_id) {
-        // ADD
+      let demoId;
+
+      // ADD OR UPDATE DEMO
+      if (rows.length > 0) {
+        //  UPDATE
+        demoId = rows[0].id;
+
+        await pool.query(
+          `UPDATE demos SET
+          place_name = ?, latitude = ?, longitude = ?, description = ?,
+          mobile = ?, contact_person = ?, updated_at = ?
+         WHERE id = ? AND user_id = ?`,
+          [
+            place_name,
+            latitude,
+            longitude,
+            description,
+            mobile,
+            contact_person,
+            updated_at,
+            demoId,
+            uid,
+          ]
+        );
+
+        // DELETE ALL OLD IMAGES
+        const [oldImages] = await pool.query(
+          `SELECT image_path FROM demo_images WHERE demo_id = ?`,
+          [demoId]
+        );
+
+        for (const img of oldImages) {
+          await deleteFromS3(img.image_path);
+        }
+
+        await pool.query(
+          `DELETE FROM demo_images WHERE demo_id = ?`,
+          [demoId]
+        );
+
+      } else {
+        //  ADD
         const [result] = await pool.query(
           `INSERT INTO demos
-          (local_id, user_id, place_name, latitude, longitude, description, mobile, contact_person, created_at, updated_at, sync_status)
-          VALUES (?,?,?,?,?,?,?,?,?,?,1)`,
+         (local_id, user_id, place_name, latitude, longitude, description,
+          mobile, contact_person, created_at, updated_at, sync_status)
+         VALUES (?,?,?,?,?,?,?,?,?,?,1)`,
           [
             local_id,
             uid,
@@ -205,46 +249,12 @@ export default {
 
         demoId = result.insertId;
       }
-      else {
-        // UPDATE
-        await pool.query(
-          `UPDATE demos SET
-            place_name = ?, latitude = ?, longitude = ?, description = ?, mobile = ?, contact_person = ?, updated_at = ?
-          WHERE id = ? AND user_id = ?`,
-          [
-            place_name,
-            latitude,
-            longitude,
-            description,
-            mobile,
-            contact_person,
-            updated_at,
-            server_id,
-            uid
-          ]
-        );
-
-        //  DELETE ALL OLD IMAGES
-        const [oldImages] = await pool.query(
-          `SELECT image_path FROM demo_images WHERE demo_id = ?`,
-          [server_id]
-        );
-
-        for (const img of oldImages) {
-          await deleteFromS3(img.image_path);
-        }
-
-        await pool.query(
-          `DELETE FROM demo_images WHERE demo_id = ?`,
-          [server_id]
-        );
-      }
 
       // UPLOAD NEW FILES
       if (req.files && req.files.length > 0) {
         for (const file of req.files) {
           const key = await uploadFile(file);
-          console.log('fileUrl === ', fileUrl);
+          console.log('key === ', key);
 
           await pool.query(
             `INSERT INTO demo_images
