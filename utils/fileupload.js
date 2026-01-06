@@ -35,7 +35,7 @@ export const uploadFile = async (file) => {
     fileStream.close();
 
     console.log('file.path >>> ', file.path);
-    
+
     // ✅ Delete temp file safely
     await fs.unlink(file.path, (err) => {
       if (err) console.error("Temp file delete error:", err);
@@ -65,8 +65,8 @@ export const getSignedUrl = (key) => {
 };
 
 /* ---------- DELETE ---------- */
-export const deleteFile = async (req, res) => {
-  const { key } = req.body;
+export const deleteFile = async (key) => {
+  if (!key) return;
 
   try {
     await s3
@@ -76,7 +76,7 @@ export const deleteFile = async (req, res) => {
       })
       .promise();
 
-    res.json({ message: "File deleted successfully" });
+    return
   } catch (err) {
     console.log(err);
     throw new Error("Delete failed");
