@@ -25,6 +25,11 @@ const pool = mysql.createPool({
       description TEXT,
       mobile VARCHAR(50),
       contact_person VARCHAR(255),
+      
+      waterMeterNumber VARCHAR(255),
+      electricityType VARCHAR(255),
+      electricityMeterNumber VARCHAR(255),
+      
       created_at BIGINT,
       updated_at BIGINT,
       server_id INT DEFAULT NULL,
