@@ -237,7 +237,7 @@ export default {
         const [result] = await pool.query(
           `INSERT INTO demos
          (local_id, user_id, place_name, latitude, longitude, description, mobile, contact_person, water_source, waterMeterNumber, electricityType, electricityMeterNumber, created_at, updated_at, sync_status)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)`,
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`,
           [
             local_id,
             uid,
