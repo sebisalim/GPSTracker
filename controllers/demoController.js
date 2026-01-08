@@ -175,6 +175,7 @@ export default {
       description,
       mobile,
       contact_person,
+      water_source,
       waterMeterNumber,
       electricityType,
       electricityMeterNumber,
@@ -198,7 +199,7 @@ export default {
 
         await pool.query(
           `UPDATE demos SET
-          place_name = ?, latitude = ?, longitude = ?, description = ?, mobile = ?, contact_person = ?, waterMeterNumber = ?, electricityType = ?, electricityMeterNumber = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+          place_name = ?, latitude = ?, longitude = ?, description = ?, mobile = ?, contact_person = ?, water_source = ?, waterMeterNumber = ?, electricityType = ?, electricityMeterNumber = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
           [
             place_name,
             latitude,
@@ -206,6 +207,7 @@ export default {
             description,
             mobile,
             contact_person,
+            water_source,
             waterMeterNumber,
             electricityType,
             electricityMeterNumber,
@@ -234,7 +236,7 @@ export default {
         //  ADD
         const [result] = await pool.query(
           `INSERT INTO demos
-         (local_id, user_id, place_name, latitude, longitude, description, mobile, contact_person, waterMeterNumber, electricityType, electricityMeterNumber, created_at, updated_at, sync_status)
+         (local_id, user_id, place_name, latitude, longitude, description, mobile, contact_person, water_source, waterMeterNumber, electricityType, electricityMeterNumber, created_at, updated_at, sync_status)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)`,
           [
             local_id,
@@ -245,6 +247,7 @@ export default {
             description,
             mobile,
             contact_person,
+            water_source,
             waterMeterNumber,
             electricityType,
             electricityMeterNumber,
